@@ -20,3 +20,6 @@ output/
 # IDE
 .vscode/
 .idea/
+
+# CI cache
+.uv-cache/
