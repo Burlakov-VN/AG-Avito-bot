@@ -10,14 +10,24 @@ logger = logging.getLogger(__name__)
 
 # Cyrillic-capable font paths (macOS)
 _FONT_PATHS = [
+    # macOS
     Path("/System/Library/Fonts/Supplemental/Arial Unicode.ttf"),
     Path("/Library/Fonts/Arial Unicode.ttf"),
     Path("/System/Library/Fonts/Supplemental/Arial.ttf"),
+    # Linux
+    Path("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"),
+    Path("/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf"),
+    Path("/usr/share/fonts/truetype/freefont/FreeSans.ttf"),
 ]
 
 _BOLD_FONT_PATHS = [
+    # macOS
     Path("/System/Library/Fonts/Supplemental/Arial Bold.ttf"),
     Path("/Library/Fonts/Arial Bold.ttf"),
+    # Linux
+    Path("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"),
+    Path("/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf"),
+    Path("/usr/share/fonts/truetype/freefont/FreeSansBold.ttf"),
 ]
 
 

@@ -159,6 +159,14 @@ async def run_template_generation(
         summary = format_template_summary(template)
         await message.answer(summary, reply_markup=confirm_keyboard())
 
+        # Send template as PDF
+        full_template = template.get("full_template", "")
+        if full_template:
+            from avito_autoload.bot.utils.pdf import markdown_to_pdf
+            pdf_bytes = markdown_to_pdf(full_template, title=f"Шаблон описаний: {niche}")
+            doc = BufferedInputFile(pdf_bytes, filename="template.pdf")
+            await message.answer_document(doc)
+
         await state.set_state(ProjectStates.confirming_template)
 
     except Exception:
@@ -207,6 +215,14 @@ async def handle_template_edit(
 
     summary = format_template_summary(template)
     await message.answer(summary, reply_markup=confirm_keyboard())
+
+    full_template = template.get("full_template", "")
+    if full_template:
+        from avito_autoload.bot.utils.pdf import markdown_to_pdf
+        pdf_bytes = markdown_to_pdf(full_template, title=f"Шаблон описаний: {niche}")
+        doc = BufferedInputFile(pdf_bytes, filename="template.pdf")
+        await message.answer_document(doc)
+
     await state.set_state(ProjectStates.confirming_template)
 
 
@@ -260,6 +276,14 @@ async def run_categorization(
         # Format and send
         summary = format_categories_summary(categories)
         await message.answer(summary, reply_markup=confirm_keyboard())
+
+        # Send categories as PDF
+        from avito_autoload.bot.utils.pdf import markdown_to_pdf
+        categories_text = summary.replace("\u2705", "-").replace("\u274c", "-")
+        pdf_bytes = markdown_to_pdf(categories_text, title=f"Категоризация: {niche}")
+        doc = BufferedInputFile(pdf_bytes, filename="categories.pdf")
+        await message.answer_document(doc)
+
         await state.set_state(ProjectStates.confirming_categories)
 
     except Exception:

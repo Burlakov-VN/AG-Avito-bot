@@ -10,6 +10,10 @@ class ProjectStates(StatesGroup):
     waiting_niche = State()           # Waiting for niche text input
     waiting_pricelist = State()       # Waiting for pricelist .xlsx file
     waiting_competitors = State()     # Waiting for competitors .xlsx file
+    waiting_addresses = State()       # Waiting for seller addresses
+    waiting_managers = State()        # Waiting for manager names per address
+    waiting_phone = State()           # Waiting for contact phone number
+    waiting_company_info = State()    # Waiting for company description and USP
 
     # Plan confirmation
     confirming_plan = State()         # Plan shown, waiting for "Start" button

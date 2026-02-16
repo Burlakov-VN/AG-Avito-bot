@@ -17,7 +17,7 @@ WELCOME_TEXT = (
 )
 
 QUESTION_NICHE = (
-    "\U0001F4CC Вопрос 1 из 3\n"
+    "\U0001F4CC Вопрос 1 из 7\n"
     "\n"
     "Подскажи свою нишу на Авито?\n"
     "\n"
@@ -77,6 +77,10 @@ async def cmd_status(message: Message, state: FSMContext, db: ProjectDB) -> None
         ProjectStates.waiting_niche.state: "Ожидание ниши",
         ProjectStates.waiting_pricelist.state: "Ожидание прайс-листа",
         ProjectStates.waiting_competitors.state: "Ожидание файла конкурентов",
+        ProjectStates.waiting_addresses.state: "Ожидание адресов",
+        ProjectStates.waiting_managers.state: "Ожидание менеджеров",
+        ProjectStates.waiting_phone.state: "Ожидание телефона",
+        ProjectStates.waiting_company_info.state: "Ожидание описания компании",
         ProjectStates.confirming_plan.state: "План готов, ожидание подтверждения",
         ProjectStates.running_ca_analysis.state: "Анализ ЦА...",
         ProjectStates.confirming_ca.state: "Анализ ЦА готов",
