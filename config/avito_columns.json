@@ -1,0 +1,51 @@
+{
+  "columns": [
+    "Id",
+    "AvitoId",
+    "ListingId",
+    "Category",
+    "GoodsType",
+    "ProductType",
+    "SparePartType",
+    "EngineSparePartType",
+    "BodySparePartType",
+    "TransmissionSparePartType",
+    "TechnicSparePartType",
+    "AdType",
+    "Title",
+    "Description",
+    "Price",
+    "PriceType",
+    "ImageUrls",
+    "VideoURL",
+    "Condition",
+    "Availability",
+    "Delivery",
+    "DateBegin",
+    "ContactPhone",
+    "ManagerName",
+    "ContactMethod",
+    "InternetCalls",
+    "Address"
+  ],
+  "required": [
+    "Id",
+    "ListingId",
+    "Category",
+    "AdType",
+    "Title",
+    "Price",
+    "ContactPhone",
+    "Address"
+  ],
+  "defaults": {
+    "AdType": "Товар приобретён на продажу",
+    "Condition": "Новое",
+    "Availability": "В наличии",
+    "Delivery": "Да",
+    "ContactMethod": "По телефону и в сообщениях",
+    "InternetCalls": "Да",
+    "PriceType": "Точная",
+    "ContactPhone": "89111111111"
+  }
+}

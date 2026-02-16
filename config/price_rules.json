@@ -1,0 +1,7 @@
+{
+  "markup_percent": 0,
+  "round_to": 10,
+  "min_price": 100,
+  "max_price": null,
+  "use_field": "Цена"
+}

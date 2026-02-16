@@ -1,0 +1,16 @@
+{
+  "tasks": {
+    "content_generation": "claude_sonnet",
+    "competitor_analysis": "gpt5",
+    "categorization": "claude_sonnet",
+    "image_prompts": "gpt5",
+    "image_generation": "nano_banana"
+  },
+  "fallbacks": {
+    "content_generation": "gemini",
+    "competitor_analysis": "gemini",
+    "categorization": "gpt5",
+    "image_prompts": "claude_sonnet",
+    "image_generation": "nano_banana"
+  }
+}
