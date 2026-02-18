@@ -14,6 +14,7 @@ class ProjectStates(StatesGroup):
     waiting_managers = State()        # Waiting for manager names per address
     waiting_phone = State()           # Waiting for contact phone number
     waiting_company_info = State()    # Waiting for company description and USP
+    waiting_title_info = State()      # Waiting for title format preferences
 
     # Plan confirmation
     confirming_plan = State()         # Plan shown, waiting for "Start" button

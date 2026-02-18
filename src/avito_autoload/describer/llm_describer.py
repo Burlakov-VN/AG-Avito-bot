@@ -15,52 +15,15 @@ logger = logging.getLogger(__name__)
 
 BATCH_SIZE = 5
 
-# Fixed company block appended to every description
-COMPANY_BLOCK = """
-_____________
-
-🏢 О НАС
-
-Компания «Китай-город» — специализированный поставщик запчастей для грузовиков и спецтехники. Работаем напрямую с заводами — без посредников и наценок.
-
-✔️ 150 000+ позиций в наличии на складе
-✔️ Специализация: Shacman, Howo, FAW, Foton, Dongfeng, КАМАЗ, Урал, МАЗ
-✔️ Только НОВЫЕ запчасти с гарантией
-✔️ Цены ниже дилерских — работаем напрямую с производителями
-✔️ Быстрый подбор по артикулу, VIN или названию
-✔️ Склады в Казани и Челябинске
-✔️ Работаем с юр. лицами (НДС) и физ. лицами
-✔️ Скидки оптовым клиентам и автосервисам
-
-_____________
-
-🚚 ДОСТАВКА И САМОВЫВОЗ
-
-• Самовывоз из Казани или Челябинска
-• Бесплатная доставка до транспортной компании
-• Отправка в день заказа — товар уже на складе!
-• ТК на выбор: СДЭК, ПЭК, Деловые Линии, Энергия, КИТ и др.
-• Доставка по всей России и СНГ
-
-💼 Оплата: наличные, перевод на карту, расчётный счёт
-
-_____________
-
-📞 Звоните прямо сейчас или пишите в чат Avito!
-Быстрый подбор, консультация, оперативная отгрузка!
-
-🔹 Не нашли нужную деталь? Позвоните — подберём аналог!
-
-❤️ Добавьте в избранное, чтобы не потерять
-✍🏻 Подпишитесь на профиль, нажав ПОДПИСАТЬСЯ внизу 👇👇👇👇
-""".strip()
+# Default company block — empty. Real company_block comes from template_config.
+COMPANY_BLOCK = ""
 
 
-def _build_description_prompt(
+def _build_items_text(
     items: list[dict],
     category_map: dict[str, CategoryResult],
 ) -> str:
-    """Build prompt for generating product-specific description blocks."""
+    """Build items text block for the prompt."""
     items_text = ""
     for i, item in enumerate(items):
         cat = category_map.get(item["key"])
@@ -79,68 +42,78 @@ def _build_description_prompt(
         if cat_info:
             items_text += f" ({cat_info})"
         items_text += "\n"
+    return items_text
 
-    return f"""Ты — опытный маркетолог-копирайтер для Авито. Специализация: запчасти для грузовиков и спецтехники.
 
-КОНТЕКСТ:
-Компания «Китай-город» продаёт НОВЫЕ запчасти для грузовиков и спецтехники. Специализация — китайские марки (Shacman, Howo, FAW, Foton, Dongfeng), а также КАМАЗ, Урал, МАЗ и др. 150 000+ позиций В НАЛИЧИИ. Склады в Казани и Челябинске.
+def _build_description_prompt(
+    items: list[dict],
+    category_map: dict[str, CategoryResult],
+    title_info: str = "",
+) -> str:
+    """Build a universal prompt for generating titles + descriptions.
 
-ЦЕЛЕВАЯ АУДИТОРИЯ И ИХ БОЛИ:
-- Частники-водители: грузовик стоит = деньги теряются, каждый день простоя — убыток 5-15 тыс. руб. Ищут деталь СРОЧНО, а конкуренты говорят "под заказ 2-4 недели"
-- Автосервисы: клиент ждёт, репутация на кону, нужна деталь быстро и с гарантией
-- Оптовики: важна цена и стабильные поставки
+    Follows the 8-block reference structure:
+    Blocks 1 (УТП), 2 (призыв), 4 (о товаре), 5 (преимущества) — generated per product.
+    Blocks 3, 6, 7, 8 — company_block, added automatically after generation.
+    """
+    items_text = _build_items_text(items, category_map)
+
+    title_rules = """
+ПРАВИЛА ЗАГОЛОВКА (поле "title"):
+- Средняя длина 50 символов, максимум 100 символов
+- Включи: название товара (основной ключ) + модель/главный параметр + характеристика
+- Первая часть — самые частотные ключевые слова, должно читаться естественно
+- Если можно определить применяемость (для какой техники/авто) — добавь
+- Можно добавить выгоду: гарантия, наличие, доставка
+- БЕЗ эмодзи в заголовке!
+- Примеры: "Вал коленчатый Cummins С4934862 КамАЗ Евро-3/4", "Арматура 12 мм А500С ГОСТ. Доставка сегодня"
+"""
+    if title_info and title_info.lower() != "авто":
+        title_rules += f"\nДОПОЛНИТЕЛЬНЫЕ УКАЗАНИЯ ОТ ВЛАДЕЛЬЦА:\n{title_info}\n"
+
+    return f"""Ты — опытный маркетолог-копирайтер для Авито.
 
 ЗАДАЧА:
-Для каждого товара напиши ВЕРХНЮЮ ЧАСТЬ описания (блок про сам товар). Нижнюю часть (о компании, доставка, CTA) мы добавляем АВТОМАТИЧЕСКИ — НЕ пиши её.
+Для каждого товара создай:
+1. ЗАГОЛОВОК объявления (поле "title") — для поля Title в Авито
+2. ИНДИВИДУАЛЬНУЮ ЧАСТЬ описания (поле "description") — для поля Description
+Блок о компании, условия покупки, доставка и финальный CTA добавляются к описанию АВТОМАТИЧЕСКИ — НЕ пиши их.
+{title_rules}
+СТРУКТУРА ОПИСАНИЯ (строго по пунктам):
 
-СТРУКТУРА ВЕРХНЕЙ ЧАСТИ (строго по пунктам):
+1. ЗАГОЛОВОК-КРЮЧОК / УТП / АКЦИЯ (1-2 строки с эмодзи):
+   - Яркий крючок, привлекающий внимание
+   - Примеры: ❗️В НАЛИЧИИ — ОТПРАВИМ СЕГОДНЯ❗️ / ⚡️ЦЕНА НИЖЕ РЫНОЧНОЙ⚡️ / 🔥НУЖНО СРОЧНО? ТОВАР НА СКЛАДЕ🔥
+   - ВАЖНО: чередуй варианты! Не используй один и тот же для всех товаров
 
-1. ЗАГОЛОВОК-КРЮЧОК (1-2 строки):
-   - Используй разные варианты! Примеры:
-     ❗️В НАЛИЧИИ НА СКЛАДЕ — ОТПРАВИМ СЕГОДНЯ❗️
-     ⚡️НУЖНА ЗАПЧАСТЬ СРОЧНО? ОНА УЖЕ НА СКЛАДЕ⚡️
-     🔥 НОВАЯ ЗАПЧАСТЬ ПО ЦЕНЕ НИЖЕ ДИЛЕРСКОЙ 🔥
-     ❗️МАШИНА СТОИТ? ДЕТАЛЬ В НАЛИЧИИ — РЕШИМ ПРОБЛЕМУ❗️
-     ⚡️150 000 ЗАПЧАСТЕЙ В НАЛИЧИИ — НЕ НУЖНО ЖДАТЬ ЗАКАЗ⚡️
-   - ВАЖНО: чередуй варианты! Не используй один и тот же для всех товаров в батче
+2. ПРИЗЫВ К ДЕЙСТВИЮ (1 строка):
+   - Короткий призыв: ☎️ Позвоните или напишите — ответим за 5 минут!
 
-2. Разделитель: _____________
+3. Разделитель: _____________
 
-3. БЛОК «О ТОВАРЕ» (📌):
-   - Что это за деталь (2-3 предложения)
-   - Какую функцию выполняет в автомобиле
-   - Почему важна (к чему приводит износ/поломка)
-   - Если деталь простая (болт, гайка, втулка) — опиши её роль в узле
+4. БЛОК «О ТОВАРЕ» (📌):
+   - Что это за товар (2-3 предложения)
+   - Для чего предназначен, какую задачу решает
+   - Ключевые характеристики и особенности
 
-4. БЛОК «ПРИМЕНЯЕМОСТЬ» (✅):
-   - Укажи конкретные марки и модели через ✅
-   - Определи по артикулу или названию (префиксы: 2360/2206 = УАЗ, 4320/375 = Урал, 5557 = Урал, 43206 = Урал, 740 = КАМАЗ, DZ = Shacman, WG = Howo, VG = Howo)
-   - Если не можешь определить точно — напиши "✅ Уточняйте применяемость — подберём по VIN или артикулу"
-
-5. БЛОК «ПОЧЕМУ СТОИТ КУПИТЬ У НАС» (🔹):
-   - 3-4 пункта через 🔹, привязанных к КОНКРЕТНОМУ товару:
-     🔹 В наличии на складе — отправка в день заказа
-     🔹 Новая деталь с гарантией (не б/у, не восстановленная)
-     🔹 Цена ниже дилерской — работаем напрямую
-     🔹 Подберём аналоги, если артикул отличается
-   - Варьируй формулировки, адаптируй под конкретную деталь
+5. БЛОК «ПРЕИМУЩЕСТВА» (🔹):
+   - 3-5 пунктов через 🔹, привязанных к товару
 
 6. СТРОКА с артикулом и состоянием:
-   🔸 Артикул: [артикул из данных]
+   🔸 Артикул: [артикул]
    🔸 Состояние: Новое
 
 ПРАВИЛА:
 - Пиши по-русски, деловой но дружелюбный стиль
-- Используй эмодзи: ❗️ ⚡️ 🔥 📌 ✅ 🔹 🔸 🛡️
-- НЕ пиши про компанию, доставку, CTA, контакты — это добавляется автоматически!
-- Длина: 150-300 слов на товар (это важно для SEO на Авито!)
-- Каждое описание должно быть УНИКАЛЬНЫМ — не копируй одну структуру слово в слово
-- Если не можешь определить назначение по названию — опиши общее назначение для данной категории запчастей
+- Используй эмодзи в описании: ❗️ ⚡️ 🔥 📌 ✅ 🔹 🔸 ☎️
+- НЕ пиши про компанию, доставку, оплату — добавляется автоматически!
+- Длина описания: 150-300 слов (важно для SEO)
+- Каждое описание должно быть УНИКАЛЬНЫМ
 
 Товары:
 {items_text}
 Ответь ТОЛЬКО валидным JSON-массивом. Используй \\n для переносов строк внутри description:
-[{{"index": 1, "description": "..."}}]"""
+[{{"index": 1, "title": "Заголовок для Авито до 100 символов", "description": "Текст описания..."}}]"""
 
 
 def generate_descriptions(
@@ -149,8 +122,11 @@ def generate_descriptions(
     cache: DescriptionCache | None = None,
     company_block: str | None = None,
     description_prompt_template: str | None = None,
+    *,
+    title_info: str = "",
+    title_map: dict[str, str] | None = None,
 ) -> dict[str, str]:
-    """Generate descriptions for input rows using LLM + cache.
+    """Generate descriptions (and titles) for input rows using LLM + cache.
 
     Args:
         rows: Input rows to generate descriptions for.
@@ -160,6 +136,8 @@ def generate_descriptions(
         description_prompt_template: Custom LLM prompt for descriptions.
             If provided, used instead of _build_description_prompt().
             Must contain {items_text} placeholder.
+        title_info: User's title format preferences.
+        title_map: If provided, populated with key -> LLM-generated title.
 
     Returns mapping: key -> full description (product block + company block).
     """
@@ -203,26 +181,10 @@ def generate_descriptions(
 
         if description_prompt_template:
             # Build items_text for custom template
-            items_text = ""
-            for i, item in enumerate(batch):
-                cat = category_map.get(item["key"])
-                cat_info = ""
-                if cat and cat.spare_part_type:
-                    parts = [f'spare_part_type="{cat.spare_part_type}"']
-                    if cat.product_type:
-                        parts.append(f'product_type="{cat.product_type}"')
-                    cat_info = ", ".join(parts)
-                items_text += (
-                    f'{i + 1}. article="{item["article"]}" '
-                    f'name="{item["name"]}" '
-                    f'price={item["price"]}'
-                )
-                if cat_info:
-                    items_text += f" ({cat_info})"
-                items_text += "\n"
+            items_text = _build_items_text(batch, category_map)
             prompt = description_prompt_template.replace("{items_text}", items_text)
         else:
-            prompt = _build_description_prompt(batch, category_map)
+            prompt = _build_description_prompt(batch, category_map, title_info)
 
         response = _call_anthropic(prompt)
 
@@ -243,6 +205,12 @@ def generate_descriptions(
                 full = f"{product_block}\n\n{effective_company_block}" if product_block else effective_company_block
                 results[item["key"]] = full
                 cache.put(item["key"], full)
+
+                # Extract title if present
+                if title_map is not None:
+                    llm_title = entry.get("title", "").strip()
+                    if llm_title:
+                        title_map[item["key"]] = llm_title
 
         # Fill missing entries
         for item in batch:

@@ -56,13 +56,13 @@ async def run_ca_analysis(
         summary = format_ca_summary(ca_data, niche)
         await message.answer(summary, reply_markup=confirm_keyboard())
 
-        # Send full analysis as PDF file if available
-        full_analysis = ca_data.get("full_analysis", "")
-        if full_analysis:
-            from avito_autoload.bot.utils.pdf import markdown_to_pdf
-            pdf_bytes = markdown_to_pdf(full_analysis, title=f"Анализ ЦА: {niche}")
-            doc = BufferedInputFile(pdf_bytes, filename="ca_analysis.pdf")
-            await message.answer_document(doc)
+        # Send full analysis as PDF file
+        from avito_autoload.bot.services.ca_analyzer import format_ca_full_report
+        from avito_autoload.bot.utils.pdf import markdown_to_pdf
+        report = format_ca_full_report(ca_data, niche)
+        pdf_bytes = markdown_to_pdf(report, title=f"Анализ ЦА: {niche}")
+        doc = BufferedInputFile(pdf_bytes, filename="ca_analysis.pdf")
+        await message.answer_document(doc)
 
         await state.set_state(ProjectStates.confirming_ca)
 
@@ -107,12 +107,12 @@ async def handle_ca_edit(
     summary = format_ca_summary(ca_data, niche)
     await message.answer(summary, reply_markup=confirm_keyboard())
 
-    full_analysis = ca_data.get("full_analysis", "")
-    if full_analysis:
-        from avito_autoload.bot.utils.pdf import markdown_to_pdf
-        pdf_bytes = markdown_to_pdf(full_analysis, title=f"Анализ ЦА: {niche}")
-        doc = BufferedInputFile(pdf_bytes, filename="ca_analysis.pdf")
-        await message.answer_document(doc)
+    from avito_autoload.bot.services.ca_analyzer import format_ca_full_report
+    from avito_autoload.bot.utils.pdf import markdown_to_pdf
+    report = format_ca_full_report(ca_data, niche)
+    pdf_bytes = markdown_to_pdf(report, title=f"Анализ ЦА: {niche}")
+    doc = BufferedInputFile(pdf_bytes, filename="ca_analysis.pdf")
+    await message.answer_document(doc)
 
     await state.set_state(ProjectStates.confirming_ca)
 
@@ -138,6 +138,7 @@ async def run_template_generation(
 
     project = await db.get_active_project(message.chat.id)
     competitors_path = project.get("competitors_path") if project else None
+    company_info = project.get("company_info", "") if project else ""
 
     try:
         # Step 1: Analyze competitors
@@ -149,7 +150,7 @@ async def run_template_generation(
             competitor_data = await analyze_competitors(niche, competitors_path)
 
         # Step 2: Build template
-        template = await build_template(niche, ca_data, competitor_data)
+        template = await build_template(niche, ca_data, competitor_data, company_info)
 
         # Save
         await db.set_json_field(project_id, "template_config", template)
@@ -197,6 +198,7 @@ async def handle_template_edit(
     ca_data = data.get("ca_data", {})
     project = await db.get_active_project(message.from_user.id)
     competitors_path = project.get("competitors_path") if project else None
+    company_info = project.get("company_info", "") if project else ""
 
     corrections = message.text
     await message.answer("\u23f3 Корректирую шаблон...")
@@ -208,7 +210,9 @@ async def handle_template_edit(
     if competitors_path:
         competitor_data = await analyze_competitors(niche, competitors_path)
 
-    template = await build_template(niche, ca_data_with_corrections, competitor_data)
+    template = await build_template(
+        niche, ca_data_with_corrections, competitor_data, company_info,
+    )
 
     await db.set_json_field(project_id, "template_config", template)
     await state.update_data(template_config=template)
@@ -246,6 +250,16 @@ async def run_categorization(
     try:
         project = await db.get_active_project(message.chat.id)
         pricelist_path = project.get("pricelist_path") if project else None
+
+        # If text pricelist, convert to temp XLSX
+        if not pricelist_path:
+            pricelist_text = project.get("pricelist_text") if project else None
+            if pricelist_text:
+                from avito_autoload.bot.services.pipeline_runner import text_to_temp_xlsx
+                temp_dir = file_storage.get_output_path(
+                    message.chat.id, data["project_id"],
+                ).parent
+                pricelist_path = str(text_to_temp_xlsx(pricelist_text, temp_dir))
 
         # Count items
         item_count = 0
@@ -318,8 +332,17 @@ async def run_pipeline(
     pricelist_path = project.get("pricelist_path") if project else None
 
     if not pricelist_path:
-        await message.answer("\u26a0\ufe0f Прайс-лист не найден. Начните заново /start")
-        return
+        # Try text-based pricelist
+        pricelist_text = project.get("pricelist_text") if project else None
+        if pricelist_text:
+            from avito_autoload.bot.services.pipeline_runner import text_to_temp_xlsx
+            temp_dir = file_storage.project_dir(message.chat.id, project_id)
+            pricelist_path = str(text_to_temp_xlsx(pricelist_text, temp_dir))
+        else:
+            await message.answer(
+                "\u26a0\ufe0f Прайс-лист не найден. Начните заново /start"
+            )
+            return
 
     output_path = file_storage.get_output_path(message.chat.id, project_id)
 
@@ -338,12 +361,22 @@ async def run_pipeline(
             except FileNotFoundError:
                 pass
 
+        # Extract user data for pipeline
+        user_phone = project.get("phone") if project else None
+        user_addresses = project.get("addresses") if project else None
+        user_managers = project.get("managers") if project else None
+        user_title_info = project.get("title_info") if project else None
+
         result = await run_pipeline_async(
             pricelist_path=Path(pricelist_path),
             output_path=output_path,
             categories_config=categories_config,
             config_dir=DEFAULT_CONFIG_DIR,
             template_config=template_config,
+            user_phone=user_phone,
+            user_addresses=user_addresses,
+            user_managers=user_managers,
+            user_title_info=user_title_info,
         )
 
         # Update DB

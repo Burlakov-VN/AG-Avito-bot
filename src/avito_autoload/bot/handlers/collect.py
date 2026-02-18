@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 router = Router()
 
 QUESTION_COMPETITORS = (
-    "\U0001F4CC Вопрос 3 из 7\n"
+    "\U0001F4CC Вопрос 3 из 8\n"
     "\n"
     "Отправь файл с объявлениями конкурентов (.xlsx), если он есть.\n"
     "\n"
@@ -24,7 +24,7 @@ QUESTION_COMPETITORS = (
 )
 
 QUESTION_ADDRESSES = (
-    "\U0001F4CC Вопрос 4 из 7\n"
+    "\U0001F4CC Вопрос 4 из 8\n"
     "\n"
     "Укажи адреса для объявлений (обязательный параметр).\n"
     "\n"
@@ -33,7 +33,7 @@ QUESTION_ADDRESSES = (
 )
 
 QUESTION_MANAGERS = (
-    "\U0001F4CC Вопрос 5 из 7\n"
+    "\U0001F4CC Вопрос 5 из 8\n"
     "\n"
     "Укажи имя менеджера для каждого адреса.\n"
     "На каждом адресе должен быть свой уникальный менеджер "
@@ -46,7 +46,7 @@ QUESTION_MANAGERS = (
 )
 
 QUESTION_PHONE = (
-    "\U0001F4CC Вопрос 6 из 7\n"
+    "\U0001F4CC Вопрос 6 из 8\n"
     "\n"
     "Укажи контактный номер телефона (обязательный параметр).\n"
     "\n"
@@ -54,7 +54,7 @@ QUESTION_PHONE = (
 )
 
 QUESTION_COMPANY_INFO = (
-    "\U0001F4CC Вопрос 7 из 7\n"
+    "\U0001F4CC Вопрос 7 из 8\n"
     "\n"
     "Расскажи коротко о своей компании:\n"
     "\u2022 Чем занимаетесь?\n"
@@ -62,6 +62,26 @@ QUESTION_COMPANY_INFO = (
     "\u2022 Почему клиенты выбирают именно вас?\n"
     "\n"
     "Это поможет составить более продающие описания для объявлений."
+)
+
+QUESTION_TITLE_INFO = (
+    "\U0001F4CC Вопрос 8 из 8\n"
+    "\n"
+    "Как формировать заголовки объявлений?\n"
+    "\n"
+    "Укажи, что важно добавлять в заголовок:\n"
+    "\u2022 Применяемость (для какой техники/авто)\n"
+    "\u2022 Бренд/производитель\n"
+    "\u2022 Состояние (Новое, Б/У)\n"
+    "\u2022 Выгода (гарантия, рассрочка, скидка)\n"
+    "\n"
+    "Примеры хороших заголовков:\n"
+    "\u2022 Вал коленчатый Cummins С4934862 КамАЗ Евро-3/4\n"
+    "\u2022 Двери межкомнатные, массив ольхи. Гарантия 5 лет\n"
+    "\u2022 Арматура 12 мм А500С ГОСТ. Доставка в день заказа\n"
+    "\n"
+    "Напиши свои правила или пример заголовка.\n"
+    "Если не уверен \u2014 напиши \u00abавто\u00bb, и я сам подберу формат."
 )
 
 
@@ -81,7 +101,7 @@ async def receive_niche(
 
     await message.answer(f"\u2705 Ниша: \u00ab{niche}\u00bb")
     await message.answer(
-        "\U0001F4CC Вопрос 2 из 7\n"
+        "\U0001F4CC Вопрос 2 из 8\n"
         "\n"
         "Отправь прайс-лист в формате Excel (.xlsx), если он есть.\n"
         "В файле должны быть обязательно: артикул, название, цена.\n"
@@ -322,6 +342,34 @@ async def receive_company_info(
     await db.update_project(project_id, company_info=text)
 
     await message.answer("\u2705 Информация о компании сохранена")
+    await state.set_state(ProjectStates.waiting_title_info)
+    await message.answer(QUESTION_TITLE_INFO)
+
+
+@router.message(ProjectStates.waiting_company_info)
+async def waiting_company_info_wrong(message: Message) -> None:
+    """Remind user to send company info as text."""
+    await message.answer(
+        "\u26a0\ufe0f Напиши описание компании текстом.\n"
+        "\n"
+        "Расскажи, чем занимаетесь и в чём ваши преимущества."
+    )
+
+
+@router.message(ProjectStates.waiting_title_info, F.text)
+async def receive_title_info(
+    message: Message,
+    state: FSMContext,
+    db: ProjectDB,
+) -> None:
+    """Receive title format preferences."""
+    text = message.text.strip()
+    data = await state.get_data()
+    project_id = data["project_id"]
+
+    await db.update_project(project_id, title_info=text)
+
+    await message.answer("\u2705 Правила заголовков сохранены")
     await message.answer("Все данные получены! Составляю план работы...")
 
     await state.set_state(ProjectStates.confirming_plan)
@@ -349,11 +397,11 @@ async def receive_company_info(
     )
 
 
-@router.message(ProjectStates.waiting_company_info)
-async def waiting_company_info_wrong(message: Message) -> None:
-    """Remind user to send company info as text."""
+@router.message(ProjectStates.waiting_title_info)
+async def waiting_title_info_wrong(message: Message) -> None:
+    """Remind user to send title info as text."""
     await message.answer(
-        "\u26a0\ufe0f Напиши описание компании текстом.\n"
+        "\u26a0\ufe0f Напиши правила заголовков текстом.\n"
         "\n"
-        "Расскажи, чем занимаетесь и в чём ваши преимущества."
+        "Или напиши \u00abавто\u00bb, чтобы я подобрал формат сам."
     )

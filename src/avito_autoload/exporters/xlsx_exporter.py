@@ -13,6 +13,7 @@ logger = logging.getLogger(__name__)
 FIELD_TO_COLUMN: dict[str, str] = {
     "id": "Id",
     "listing_id": "ListingId",
+    "source_code": "Код",
     "category": "Category",
     "goods_type": "GoodsType",
     "product_type": "ProductType",

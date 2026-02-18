@@ -51,6 +51,10 @@ def test_states_exist():
     assert ProjectStates.waiting_niche is not None
     assert ProjectStates.waiting_pricelist is not None
     assert ProjectStates.waiting_competitors is not None
+    assert ProjectStates.waiting_addresses is not None
+    assert ProjectStates.waiting_managers is not None
+    assert ProjectStates.waiting_phone is not None
+    assert ProjectStates.waiting_company_info is not None
     assert ProjectStates.confirming_plan is not None
     assert ProjectStates.running_ca_analysis is not None
     assert ProjectStates.confirming_ca is not None
@@ -236,6 +240,93 @@ def test_categories_format_summary():
 
 
 # === Pipeline Runner ===
+
+
+def test_text_to_temp_xlsx_tab_separated(tmp_path):
+    from avito_autoload.bot.services.pipeline_runner import text_to_temp_xlsx
+
+    text = "Код\tАртикул\tНаименование\tЦена за штуку\n50007026\t7170290\tСтекло 7170290\t60830\n222002\tС4934862\tВал коленчатый\t76021"
+    xlsx_path = text_to_temp_xlsx(text, tmp_path)
+
+    assert xlsx_path.exists()
+    from avito_autoload.parsers.xlsx_parser import parse_xlsx
+    rows = parse_xlsx(xlsx_path)
+    assert len(rows) == 2
+    assert rows[0].article == "7170290"
+    assert rows[0].name == "Стекло 7170290"
+
+
+def test_text_to_temp_xlsx_plain_text(tmp_path):
+    from avito_autoload.bot.services.pipeline_runner import text_to_temp_xlsx
+
+    text = "Стекло 7170290\nВал коленчатый Cummins\nШпилька ступицы"
+    xlsx_path = text_to_temp_xlsx(text, tmp_path)
+
+    assert xlsx_path.exists()
+    from avito_autoload.parsers.xlsx_parser import parse_xlsx
+    rows = parse_xlsx(xlsx_path)
+    assert len(rows) == 3
+    assert rows[0].name == "Стекло 7170290"
+
+
+def test_text_to_temp_xlsx_vertical_table(tmp_path):
+    """Test vertical table format (Telegram pastes each cell on new line)."""
+    from avito_autoload.bot.services.pipeline_runner import text_to_temp_xlsx
+
+    text = (
+        "Код\nАртикул\nНаименование\nЦена за штуку\n"
+        "50007026\n7170290\nСтекло 7170290\n60 830,00\n"
+        "222002\nС4934862\nВал коленчатый\n76 021,00\n"
+    )
+    xlsx_path = text_to_temp_xlsx(text, tmp_path)
+
+    assert xlsx_path.exists()
+    from avito_autoload.parsers.xlsx_parser import parse_xlsx
+    rows = parse_xlsx(xlsx_path)
+    assert len(rows) == 2
+    assert rows[0].code == "50007026"
+    assert rows[0].article == "7170290"
+    assert rows[0].name == "Стекло 7170290"
+    assert rows[1].article == "С4934862"
+
+
+def test_text_to_temp_xlsx_vertical_no_code(tmp_path):
+    """Test vertical table without Код column — auto-generates codes."""
+    from avito_autoload.bot.services.pipeline_runner import text_to_temp_xlsx
+
+    text = "Артикул\nНаименование\n7170290\nСтекло 7170290\nС4934862\nВал коленчатый\n"
+    xlsx_path = text_to_temp_xlsx(text, tmp_path)
+
+    assert xlsx_path.exists()
+    from avito_autoload.parsers.xlsx_parser import parse_xlsx
+    rows = parse_xlsx(xlsx_path)
+    assert len(rows) == 2
+    assert rows[0].article == "7170290"
+    assert rows[0].name == "Стекло 7170290"
+
+
+def test_text_to_temp_xlsx_space_separated(tmp_path):
+    """Test space-separated table (Telegram strips tabs from pasted Excel)."""
+    from avito_autoload.bot.services.pipeline_runner import text_to_temp_xlsx
+
+    text = (
+        "Код Артикул Наименование Цена за штуку\n"
+        "50007026 7170290 Стекло 7170290 60 830,00\n"
+        "222002 С4934862 Вал коленчатый Cummins С4934862 76 021,00\n"
+    )
+    xlsx_path = text_to_temp_xlsx(text, tmp_path)
+
+    assert xlsx_path.exists()
+    from avito_autoload.parsers.xlsx_parser import parse_xlsx
+    rows = parse_xlsx(xlsx_path)
+    assert len(rows) == 2
+    assert rows[0].code == "50007026"
+    assert rows[0].article == "7170290"
+    assert "Стекло" in rows[0].name
+    assert rows[0].price > 0
+    assert rows[1].code == "222002"
+    assert rows[1].article == "С4934862"
+    assert "Вал" in rows[1].name
 
 
 def test_pipeline_format_result():

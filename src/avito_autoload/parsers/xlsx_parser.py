@@ -21,6 +21,23 @@ COLUMN_MAP: dict[str, str] = {
 }
 
 
+def _parse_number(value: object) -> float:
+    """Parse a number from various formats: 60830, '60 830,00', '76021.50'."""
+    if value is None:
+        return 0.0
+    if isinstance(value, (int, float)):
+        return float(value)
+    s = str(value).strip()
+    if not s:
+        return 0.0
+    # Remove spaces (thousands separator), replace comma with dot
+    s = s.replace("\u00a0", "").replace(" ", "").replace(",", ".")
+    try:
+        return float(s)
+    except ValueError:
+        return 0.0
+
+
 def _normalize_header(header: str) -> str:
     """Normalize a column header for matching."""
     return header.strip().lower()
@@ -88,8 +105,8 @@ def parse_xlsx(file_path: Path, sheet_name: str | None = None) -> list[InputRow]
             raw["name"] = str(raw["name"]).strip()
 
         raw["quantity"] = int(raw.get("quantity") or 0)
-        raw["cost"] = float(raw.get("cost") or 0.0)
-        raw["price"] = float(raw.get("price") or 0.0)
+        raw["cost"] = _parse_number(raw.get("cost"))
+        raw["price"] = _parse_number(raw.get("price"))
 
         try:
             result.append(InputRow(**raw))

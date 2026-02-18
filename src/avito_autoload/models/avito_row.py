@@ -8,6 +8,7 @@ class AvitoRow(BaseModel):
 
     id: str
     listing_id: str
+    source_code: str = ""
     category: str = ""
     goods_type: str = ""
     product_type: str = ""

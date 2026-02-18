@@ -23,6 +23,7 @@ CREATE TABLE IF NOT EXISTS projects (
     managers TEXT,
     phone TEXT,
     company_info TEXT,
+    title_info TEXT,
     ca_analysis TEXT,
     template_config TEXT,
     categories_config TEXT,
@@ -47,6 +48,11 @@ class ProjectDB:
         self._db = await aiosqlite.connect(str(self.db_path))
         self._db.row_factory = aiosqlite.Row
         await self._db.execute(CREATE_TABLE)
+        # Migrate: add title_info column if missing (for existing DBs)
+        try:
+            await self._db.execute("ALTER TABLE projects ADD COLUMN title_info TEXT")
+        except Exception:
+            pass  # Column already exists
         await self._db.commit()
         logger.info("Database initialized: %s", self.db_path)
 

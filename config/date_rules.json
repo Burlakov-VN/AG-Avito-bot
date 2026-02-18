@@ -3,5 +3,8 @@
   "single_date": null,
   "range_start": null,
   "range_end": null,
-  "date_format": "%d.%m.%Y"
+  "date_format": "iso",
+  "timezone_offset": 5,
+  "base_hour": 8,
+  "minute_step": 7
 }

@@ -159,6 +159,89 @@ async def analyze_target_audience(
         }
 
 
+def format_ca_full_report(ca_data: dict, niche: str) -> str:
+    """Format CA analysis as a full Markdown report for PDF."""
+    lines = [
+        f"# Анализ целевой аудитории: {niche}",
+        "",
+    ]
+
+    # Segments
+    segments = ca_data.get("segments", [])
+    if segments:
+        lines.append("## Сегменты покупателей")
+        lines.append("")
+        for i, seg in enumerate(segments, 1):
+            name = seg.get("name", "")
+            desc = seg.get("description", "")
+            share = seg.get("share_percent", "")
+            share_text = f" ({share}%)" if share else ""
+            lines.append(f"### {i}. {name}{share_text}")
+            lines.append("")
+            lines.append(desc)
+            lines.append("")
+
+    # Main pain
+    main_pain = ca_data.get("main_pain", "")
+    if main_pain:
+        lines.append("## Главная боль ЦА")
+        lines.append("")
+        lines.append(main_pain)
+        lines.append("")
+
+    # Pain points
+    pain_points = ca_data.get("pain_points", [])
+    if pain_points:
+        lines.append("## Болевые точки")
+        lines.append("")
+        for point in pain_points:
+            lines.append(f"- {point}")
+        lines.append("")
+
+    # USP
+    top_usp = ca_data.get("top_usp", [])
+    if top_usp:
+        lines.append("## Топ УТП для объявлений")
+        lines.append("")
+        for i, usp in enumerate(top_usp, 1):
+            lines.append(f"{i}. {usp}")
+        lines.append("")
+
+    # Objections
+    objections = ca_data.get("objections", [])
+    if objections:
+        lines.append("## Возражения и как их снимать")
+        lines.append("")
+        for obj in objections:
+            lines.append(f"- {obj}")
+        lines.append("")
+
+    # Keywords
+    keywords = ca_data.get("keywords", [])
+    if keywords:
+        lines.append("## Ключевые слова")
+        lines.append("")
+        lines.append(", ".join(keywords))
+        lines.append("")
+
+    # Tone
+    tone = ca_data.get("tone", "")
+    if tone:
+        lines.append("## Рекомендованный тон коммуникации")
+        lines.append("")
+        lines.append(tone)
+        lines.append("")
+
+    # Full analysis text (if LLM provided it)
+    full_text = ca_data.get("full_analysis", "")
+    if full_text and not full_text.strip().startswith("{"):
+        lines.append("---")
+        lines.append("")
+        lines.append(full_text)
+
+    return "\n".join(lines)
+
+
 def format_ca_summary(ca_data: dict, niche: str) -> str:
     """Format CA analysis as a Telegram message."""
     segments = ca_data.get("segments", [])
