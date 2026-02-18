@@ -363,21 +363,18 @@ def _run_pipeline_sync(
 
     desc_cache = DescriptionCache()
 
-    # Use custom template if provided
+    # Use company block from template if provided (but always use built-in prompt)
     custom_company_block = None
-    custom_prompt_template = None
     if template_config:
         custom_company_block = template_config.get("company_block") or None
-        custom_prompt_template = template_config.get("description_prompt") or None
 
-    # Generate descriptions + titles via LLM
+    # Generate descriptions + titles via LLM (always use built-in prompt from llm_describer)
     title_map: dict[str, str] = {}
     desc_map = generate_descriptions(
         input_rows,
         category_map,
         desc_cache,
         company_block=custom_company_block,
-        description_prompt_template=custom_prompt_template,
         title_info=user_title_info or "",
         title_map=title_map,
     )
