@@ -48,11 +48,16 @@ class ProjectDB:
         self._db = await aiosqlite.connect(str(self.db_path))
         self._db.row_factory = aiosqlite.Row
         await self._db.execute(CREATE_TABLE)
-        # Migrate: add title_info column if missing (for existing DBs)
-        try:
-            await self._db.execute("ALTER TABLE projects ADD COLUMN title_info TEXT")
-        except Exception:
-            pass  # Column already exists
+        # Migrate: add columns that may be missing in older DBs
+        for col in [
+            "pricelist_text", "competitors_text", "addresses", "managers",
+            "phone", "company_info", "title_info", "ca_analysis",
+            "template_config", "categories_config",
+        ]:
+            try:
+                await self._db.execute(f"ALTER TABLE projects ADD COLUMN {col} TEXT")
+            except Exception:
+                pass  # Column already exists
         await self._db.commit()
         logger.info("Database initialized: %s", self.db_path)
 
